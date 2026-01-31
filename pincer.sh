@@ -123,10 +123,18 @@ discover_configs() {
 }
 
 # Simple YAML value extractor (no yq needed)
-yaml_get() {
+cfg_get() {
     local file="$1" key="$2"
-    grep -E "^\s*${key}\s*:" "$file" 2>/dev/null | head -1 | sed 's/^[^:]*:\s*//' | sed 's/\s*#.*//' | sed 's/^["'"'"']//' | sed 's/["'"'"']$//'
+    # Try JSON style: "key": "value" or "key": value
+    local val
+    val=$(grep -E "\"${key}\"\s*:" "$file" 2>/dev/null | head -1 | sed 's/.*:\s*//' | sed 's/[",]//g' | sed 's/^\s*//;s/\s*$//')
+    if [[ -n "$val" ]]; then echo "$val"; return; fi
+    # Try YAML style: key: value
+    val=$(grep -E "^\s*${key}\s*:" "$file" 2>/dev/null | head -1 | sed 's/^[^:]*:\s*//' | sed 's/\s*#.*//' | sed 's/^["'"'"']//' | sed 's/["'"'"']$//')
+    echo "$val"
 }
+# Backward compat alias
+yaml_get() { cfg_get "$@"; }
 
 # Check if a key exists anywhere in config files
 config_has_key() {
@@ -399,7 +407,13 @@ check_default_creds() {
     # Check if gateway token is set at all
     local has_gateway_token=0
     for f in "${CONFIG_FILES[@]}"; do
+        # Multi-line JSON: just check if "token" key exists with a real value near gateway/auth sections
         if grep -qiE '(gateway.*token|gatewayToken|GATEWAY_TOKEN)' "$f" 2>/dev/null; then
+            has_gateway_token=1
+            break
+        fi
+        # JSON configs: token on its own line inside auth block
+        if grep -qE '"token"\s*:\s*"[^"]{8,}"' "$f" 2>/dev/null; then
             has_gateway_token=1
             break
         fi
