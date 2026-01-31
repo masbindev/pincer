@@ -871,11 +871,13 @@ main() {
         shift
     done
 
+    local rc=0
     case "$cmd" in
-        scan) do_scan ;;
-        fix)  do_fix ;;
+        scan) do_scan || rc=$? ;;
+        fix)  do_fix || rc=$? ;;
         *)    die "Unknown command: $cmd. Try --help" ;;
     esac
+    exit "$rc"
 }
 
 main "$@"
