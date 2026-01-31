@@ -95,7 +95,7 @@ discover_configs() {
         "/etc/openclaw"
     )
 
-    local config_names=("config.yaml" "config.yml" "config.json" "gateway.yaml" ".env" "docker-compose.yml")
+    local config_names=("config.yaml" "config.yml" "config.json" "clawdbot.json" "moltbot.json" "openclaw.json" "gateway.yaml" ".env" "docker-compose.yml")
 
     for dir in "${search_dirs[@]}"; do
         [[ -d "$dir" ]] || continue
@@ -661,14 +661,32 @@ do_fix() {
                 # Find the main config and suggest adding safeBins
                 local target_cfg=""
                 for f in "${CONFIG_FILES[@]}"; do
-                    if [[ "$(basename "$f")" =~ ^config\.(yaml|yml|json)$ ]]; then
+                    if [[ "$(basename "$f")" =~ ^(config|clawdbot|moltbot|openclaw)\.(yaml|yml|json)$ ]]; then
                         target_cfg="$f"
                         break
                     fi
                 done
                 if [[ -n "$target_cfg" ]]; then
                     if ! grep -q 'safeBins' "$target_cfg" 2>/dev/null; then
-                        cat >> "$target_cfg" <<'SAFEBINS'
+                        if [[ "$target_cfg" == *.json ]]; then
+                            # For JSON configs, use a temp file with python/node or manual instruction
+                            if command -v node &>/dev/null; then
+                                node -e "
+const fs = require('fs');
+const cfg = JSON.parse(fs.readFileSync('$target_cfg', 'utf8'));
+if (!cfg.tools) cfg.tools = {};
+if (!cfg.tools.exec) cfg.tools.exec = {};
+cfg.tools.exec.safeBins = ['ls','cat','head','tail','grep','find','wc','echo','date','pwd','whoami','git','node','npm','npx','python','python3','pip','curl'];
+fs.writeFileSync('$target_cfg', JSON.stringify(cfg, null, 2) + '\n');
+" 2>/dev/null && \
+                                    echo -e "  ${GREEN}✓${RESET} Added safeBins allowlist to $target_cfg"
+                            else
+                                echo -e "  ${YELLOW}⚠${RESET} JSON config detected but node not available for safe editing"
+                                echo -e "    Add this to your config manually under \"tools\":"
+                                echo -e "    \"exec\": { \"safeBins\": [\"ls\",\"cat\",\"grep\",\"git\",\"node\",\"npm\",\"curl\"] }"
+                            fi
+                        else
+                            cat >> "$target_cfg" <<'SAFEBINS'
 
 # Added by Pincer — shell command allowlist
 tools:
@@ -694,10 +712,11 @@ tools:
       - pip
       - curl
 SAFEBINS
-                        echo -e "  ${GREEN}✓${RESET} Added safeBins allowlist to $target_cfg"
+                            echo -e "  ${GREEN}✓${RESET} Added safeBins allowlist to $target_cfg"
+                        fi
                     fi
                 else
-                    echo -e "  ${YELLOW}⚠${RESET} No config.yaml found — add safeBins manually"
+                    echo -e "  ${YELLOW}⚠${RESET} No config file found — add safeBins manually to your OpenClaw config"
                 fi
                 ;;
             disable_auth_bypass)
