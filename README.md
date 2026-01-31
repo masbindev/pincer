@@ -14,12 +14,19 @@ Pincer audits your [OpenClaw](https://github.com/nichochar/open-claw)/Clawdbot/M
 
 ## Install
 
-**One-liner:**
+**Quick scan (no install):**
 ```bash
 curl -sL https://raw.githubusercontent.com/masbindev/pincer/main/pincer.sh | bash
 ```
 
-**Or clone:**
+**Install locally (recommended — enables `fix` command):**
+```bash
+curl -sL https://raw.githubusercontent.com/masbindev/pincer/main/pincer.sh -o pincer.sh
+chmod +x pincer.sh
+./pincer.sh scan
+```
+
+**Or clone the repo:**
 ```bash
 git clone https://github.com/masbindev/pincer.git
 cd pincer && ./pincer.sh scan

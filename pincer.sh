@@ -544,7 +544,13 @@ print_report() {
     echo ""
 
     if (( ${#FIX_ACTIONS[@]} > 0 )); then
-        echo -e "Run ${BOLD}./pincer.sh fix${RESET} to auto-fix critical issues."
+        if [[ ! -t 0 ]]; then
+            echo -e "To fix issues, install Pincer locally:"
+            echo -e "  ${BOLD}curl -sL https://raw.githubusercontent.com/masbindev/pincer/main/pincer.sh -o pincer.sh && chmod +x pincer.sh${RESET}"
+            echo -e "  ${BOLD}./pincer.sh fix${RESET}"
+        else
+            echo -e "Run ${BOLD}./pincer.sh fix${RESET} to auto-fix critical issues."
+        fi
     fi
     echo ""
 }
